@@ -6,4 +6,4 @@ A little introduction to Redux.
 yarn && yarn start
 ```
 
-to run in development
+to run in development.
