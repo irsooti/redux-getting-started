@@ -1,4 +1,14 @@
-import { createStore } from 'redux';
+import {
+  configureStore,
+  createAsyncThunk,
+  createSlice,
+} from '@reduxjs/toolkit';
+
+const delayedCounter = createAsyncThunk('counter/delayed', async () => {
+  return await new Promise((resolve) => {
+    resolve(Math.random());
+  });
+});
 
 /**
  * This is a reducer - a function that takes a current state value and an
@@ -12,41 +22,67 @@ import { createStore } from 'redux';
  * You can use any conditional logic you want in a reducer. In this example,
  * we use a switch statement, but it's not required.
  */
-function counterReducer(state = { value: 0 }, action) {
-  switch (action.type) {
-    case 'counter/incremented':
-      return { value: state.value + 1 };
-    case 'counter/decremented':
-      return { value: state.value - 1 };
-    default:
-      return state;
-  }
-}
+const counterSlice = createSlice({
+  initialState: {
+    value: 0,
+    random: '-',
+  },
+  name: 'counter',
+  reducers: {
+    increment: (state) => {
+      state.value += 1;
+    },
+    decrement: (state) => {
+      state.value -= 1;
+    },
+  },
+  extraReducers: (builder) => {
+    // Add reducers for additional action types here, and handle loading state as needed
+    builder.addCase(delayedCounter.fulfilled, (state, action) => {
+      console.log(action);
+      // Add user to the state array
+      state.random = action.payload;
+    });
+  },
+});
 
 // Create a Redux store holding the state of your app.
 // Its API is { subscribe, dispatch, getState }.
-let store = createStore(counterReducer);
+let store = configureStore({
+  reducer: { counter: counterSlice.reducer },
+});
 
+const { increment, decrement } = counterSlice.actions;
 // You can use subscribe() to update the UI in response to state changes.
 // Normally you'd use a view binding library (e.g. React Redux) rather than subscribe() directly.
 // There may be additional use cases where it's helpful to subscribe as well.
 store.subscribe(onSubscribe);
 
 // UI
-
 const buttonElement = document.querySelector('#js-increment');
+const buttonRandomElement = document.querySelector('#js-random');
+
 const incrementElement = document.querySelector('#js-increment-value');
+const randomElement = document.querySelector('#js-random-value');
 const initialState = store.getState();
 
-incrementElement.textContent = initialState.value;
+incrementElement.textContent = initialState.counter.value;
+randomElement.textContent = initialState.counter.random;
 
 // The only way to mutate the internal state is to dispatch an action.
 // The actions can be serialized, logged or stored and later replayed.
 buttonElement.addEventListener('click', () => {
-  store.dispatch({ type: 'counter/incremented' });
+  store.dispatch(increment());
+});
+
+buttonRandomElement.addEventListener('click', () => {
+  store.dispatch(delayedCounter());
 });
 
 function onSubscribe() {
-  const { value } = store.getState();
+  const {
+    counter: { value, random },
+  } = store.getState();
   incrementElement.textContent = value;
+  randomElement.textContent = random;
 }
